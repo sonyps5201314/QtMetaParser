@@ -517,7 +517,7 @@ void QtMetaParser<T>::StartParse()
 	}
 	//获取QT版本号
 	int revision = get_dword(metaObject.data);
-	if (revision == 5) {
+	if (revision == 5 || revision == 6) {
 		//Qt4.x低版本
 		parseMetaData_4(metaObject.data);
 	}

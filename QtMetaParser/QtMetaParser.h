@@ -521,9 +521,13 @@ void QtMetaParser<T>::StartParse()
 		//Qt4.x低版本
 		parseMetaData_4(metaObject.data);
 	}
-	//To do..也许有更多分支
-	else {
+	else if (revision == 7)
+	{
 		parseStringData(metaObject.stringdata);
 		parseMetaData(metaObject.data);
+	}
+	else
+	{
+		msg("Unsupported metadata version:%d\n", revision);
 	}
 }

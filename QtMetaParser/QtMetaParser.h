@@ -3,6 +3,7 @@
 #include <vector>
 #include <bytes.hpp>
 #include <kernwin.hpp>
+#include <search.hpp>
 #include <map>
 #include <algorithm>
 #include "QtMetaParser.h"
@@ -338,7 +339,6 @@ bool QtMetaParser<T>::parseMetaData(T addr)
 	}
 
 	//开始输出结果
-	msg_clear();
 	int index = 0;
 	msg("signal count(%d):\n", signalMethodList.size());
 	for (unsigned int n = 0; n < signalMethodList.size(); ++n) {
@@ -427,8 +427,8 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 			signalMethodList[n].retType = "void";
 		}
 		std::string funcSrc = signalMethodList[n].retType + " ";
-		int start = signalMethodList[n].methodSignature.find('(');
-		int end = signalMethodList[n].methodSignature.find(')');
+		size_t start = signalMethodList[n].methodSignature.find('(');
+		size_t end = signalMethodList[n].methodSignature.find(')');
 		if (start == -1 || end == -1) {
 			return false;
 		}
@@ -462,8 +462,8 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 			slotMethodList[n].retType = "void";
 		}
 		std::string funcSrc = slotMethodList[n].retType + " ";
-		int start = slotMethodList[n].methodSignature.find('(');
-		int end = slotMethodList[n].methodSignature.find(')');
+		size_t start = slotMethodList[n].methodSignature.find('(');
+		size_t end = slotMethodList[n].methodSignature.find(')');
 		if (start == -1 || end == -1) {
 			return false;
 		}
@@ -493,7 +493,6 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 	}
 
 	//————开始输出结果——————
-	msg_clear();
 	int index = 0;
 	msg("signal count(%d):\n", signalMethodList.size());
 	for (unsigned int n = 0; n < signalMethodList.size(); ++n) {
@@ -506,28 +505,141 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 	return true;
 }
 
+/**
+ * @brief 在指定节区中二进制搜索一个字符串。
+ *
+ * @param segment_name 要搜索的节区名称 (e.g., ".rdata", ".data")。
+ * @param search_text 要搜索的文本。
+ * @return bool 如果找到则返回 true。
+ */
+bool search_string_in_segment(const char* segment_name, const char* search_text)
+{
+	segment_t* seg = get_segm_by_name(segment_name);
+	if (seg == nullptr)
+	{
+		// 静默失败，因为某些节区可能不存在 (e.g., .rdata vs .rodata)
+		// msg("[-] Segment '%s' not found, skipping.\n", segment_name);
+		return false;
+	}
+
+	ea_t start_ea = seg->start_ea;
+	ea_t end_ea = seg->end_ea;
+	const size_t text_len = strlen(search_text);
+
+	if (text_len == 0)
+	{
+		return false; // 不搜索空字符串
+	}
+
+	//msg("[*] Binary searching for '%s' in segment %s (0x%a to 0x%a)\n", search_text, segment_name, start_ea, end_ea);
+
+	ea_t found_ea = bin_search(
+		start_ea,
+		end_ea,
+		(const uchar*)search_text,  // image: 要搜索的字节
+		nullptr,                    // mask:  无掩码，精确搜索
+		text_len,                   // len:   字节长度
+		SEARCH_DOWN | SEARCH_CASE   // flags: 向下搜索，大小写敏感
+	);
+
+	if (found_ea != BADADDR)
+	{
+		//msg("  [+] Found a match at address 0x%a\n", found_ea);
+		return true;
+	}
+
+	return false;
+}
+
 template<typename T>
 void QtMetaParser<T>::StartParse()
 {
-	ea_t addr = get_screen_ea();
-	msg("parse addr:%08X\n", addr);
-	metaObject = { 0 };
-	if (get_bytes(&metaObject, sizeof(metaObject), addr) != sizeof(metaObject)) {
-		int a = 0;
-	}
-	//获取QT版本号
-	int revision = get_dword(metaObject.data);
-	if (revision == 5 || revision == 6) {
-		//Qt4.x低版本
-		parseMetaData_4(metaObject.data);
-	}
-	else if (revision == 7)
+	const char* segment_name = ".data";
+	// 1. 根据名称查找节区
+	segment_t* data_seg = get_segm_by_name(segment_name);
+
+	if (data_seg == nullptr)
 	{
-		parseStringData(metaObject.stringdata);
-		parseMetaData(metaObject.data);
+		msg("[-] Segment '%s' not found.\n", segment_name);
+		return;
 	}
-	else
+
+	ea_t seg_start = data_seg->start_ea;
+	ea_t seg_end = data_seg->end_ea;
+
+	size_t find_count = 0;
+
+	msg("[*] Start searching for QT metadata entries in %s (from 0x%a to 0x%a)\n",
+		segment_name, seg_start, seg_end);
+
+	// 2. 遍历节区内的每一个已定义的“头”（head）
+	// a “head” is the starting address of an instruction or data item.
+	for (ea_t head = seg_start; head < seg_end; head = next_head(head, seg_end))
 	{
-		msg("Unsupported metadata version:%d\n", revision);
+		// 3. 获取地址的标志位 (flags)
+		flags64_t flags = get_flags(head);
+
+		// 4. 判断这个“头”是否被定义为数据
+		if (is_data(flags))
+		{
+			// 5. 如果是数据，获取并打印相关信息
+			qstring item_name;
+			get_visible_name(&item_name, head); // 获取名称
+
+			asize_t item_size = get_item_size(head); // 获取大小
+			if (item_size > 0x40)
+			{
+				// 目前最大的QT6 64位版本的QMetaObject也才0x40个字节大小
+				continue;
+			}
+
+			//msg("  - Address: 0x%a | Name: %s | Size: %u bytes\n", head, item_name.c_str(), (unsigned int)item_size);
+
+			// 清理上一次的字符串表
+			this->stringDataList.clear();
+
+			// 读取 metaObject 结构并尝试解析
+			metaObject = { 0 };
+			if (get_bytes(&metaObject, sizeof(metaObject), head) != sizeof(metaObject)) {
+				// 读取失败，跳过
+				// 静态分析未优化版本的QT时会出现这种情况，这个时候可以通过将目标程序调试运行起来后(即让这些staticMetaObject对象初始化完成后)再试即可解决
+				continue;
+			}
+
+			int revision = get_dword(metaObject.data);
+			if (revision > 0)
+			{
+				if (revision == 5 || revision == 6) {
+					// Qt4.x 风格元数据
+					if (parseMetaData_4(metaObject.data))
+					{
+						find_count++;
+					}
+				}
+				else if (revision == 7) {
+					// Qt5 风格，先解析 stringdata 再解析 data
+					if (!parseStringData(metaObject.stringdata)) {
+						msg("parseStringData failed for %s @ %08X\n", item_name, head);
+						continue;
+					}
+					if (parseMetaData(metaObject.data))
+					{
+						find_count++;
+					}
+				}
+				else if (revision > 7 && revision <= 8) {
+					// 暂时不支持QT6及以上的版本
+					msg("Unsupported metadata version:%d for %s @ %08X\n", revision, item_name, head);
+				}
+			}
+		}
+	}
+
+	msg("[*] Search completed.\n");
+	if (find_count == 0)
+	{
+		bool like = search_string_in_segment(".rdata", "?qt_metacall@");
+		warning("No metadata entries were found%sou can debug this module and try again after it is initialized.",
+			like ? ", but this module does look like a QT module. Y" : ". If you are sure that this is a QT module, y");
 	}
 }

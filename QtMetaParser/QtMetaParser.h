@@ -207,7 +207,7 @@ qvector<qstring> recognizeFunctionParamsTypeList(qstring& functionSignature)
 	if (paramStart == -1 || paramEnd == -1) {
 		return retList;
 	}
-	qstring paramListString = functionSignature.substr(paramStart + 1, paramEnd - paramStart - 1);
+	qstring paramListString = functionSignature.substr(paramStart + 1, paramEnd);
 	qstring currentParam;
 	size_t openBrackets = 0;
 	for (char c : paramListString) {
@@ -222,6 +222,9 @@ qvector<qstring> recognizeFunctionParamsTypeList(qstring& functionSignature)
 		else if (c == ',' && openBrackets == 0) {
 			retList.push_back(currentParam);
 			currentParam.clear();
+		}
+		else if (c == 0) {
+			break;
 		}
 		else {
 			currentParam += c;
@@ -443,7 +446,7 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 		if (end != start + 1) {
 			//参数个数为1
 			if (!std::count(signalMethodList[n].methodSignature.begin(), signalMethodList[n].methodSignature.end(), ',')) {
-				funcSrc = funcSrc + signalMethodList[n].methodSignature.substr(start + 1, end - start - 1) + " " + signalMethodList[n].paramName;
+				funcSrc = funcSrc + signalMethodList[n].methodSignature.substr(start + 1, end) + " " + signalMethodList[n].paramName;
 			}
 			else {
 				qvector<qstring> pararmNameList = recognizeFunctionParamsNameList(signalMethodList[n].paramName);
@@ -478,7 +481,7 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 		if (end != start + 1) {
 			//参数个数为1
 			if (!std::count(slotMethodList[n].methodSignature.begin(), slotMethodList[n].methodSignature.end(), ',')) {
-				funcSrc = funcSrc + slotMethodList[n].methodSignature.substr(start + 1, end - start - 1) + " " + slotMethodList[n].paramName;
+				funcSrc = funcSrc + slotMethodList[n].methodSignature.substr(start + 1, end) + " " + slotMethodList[n].paramName;
 			}
 			else {
 				qvector<qstring> pararmNameList = recognizeFunctionParamsNameList(slotMethodList[n].paramName);

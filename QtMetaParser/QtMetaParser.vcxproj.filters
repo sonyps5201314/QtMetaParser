@@ -13,30 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Public">
-      <UniqueIdentifier>{5c9be194-fcae-427b-986b-962fc7c8074d}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Public\IDAWrapper.cpp">
-      <Filter>Public</Filter>
-    </ClCompile>
-    <ClCompile Include="Common.cpp">
+    <ClCompile Include="stdafx.cpp">
       <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="QtMetaParser.h">
-      <Filter>源文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Common.h">
+    <ClInclude Include="stdafx.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Public\IDAWrapper.h">
-      <Filter>Public</Filter>
+    <ClInclude Include="QtMetaParser.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

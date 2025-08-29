@@ -1,21 +1,12 @@
-#include <hexrays.hpp>
-#include <auto.hpp>
-#include <diskio.hpp>
-#include <entry.hpp>
+#include "stdafx.h"
 #include "QtMetaParser.h"
-
-// Hex-Rays API pointer
-hexdsp_t* hexdsp = nullptr;
 
 //--------------------------------------------------------------------------
 struct plugin_ctx_t : public plugmod_t
 {
-	bool inited = true;
-
 	~plugin_ctx_t()
 	{
-		if (inited)
-			term_hexrays_plugin();
+
 	}
 	virtual bool idaapi run(size_t) override;
 };
@@ -23,11 +14,6 @@ struct plugin_ctx_t : public plugmod_t
 //--------------------------------------------------------------------------
 static plugmod_t* idaapi init()
 {
-	if (!init_hexrays_plugin()) {
-		return nullptr; // no decompiler
-	}
-	const char* hxver = get_hexrays_version();
-	msg("[QtMetaParser] plugin 1.0 loaded,Author: fjqisba\n");
 	return new plugin_ctx_t;
 }
 

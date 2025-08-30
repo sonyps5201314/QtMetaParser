@@ -145,6 +145,16 @@ void InitQMetaTypeMap()
 	gMapQMetaType[1024] = "User";
 }
 
+qstring OuputParamName(qstring paramName)
+{
+	qstring result;
+	if (!paramName.empty())
+	{
+		result = " ";
+		result += paramName;
+	}
+	return result;
+}
 
 template<typename T>
 class QtMetaParser
@@ -352,10 +362,10 @@ bool QtMetaParser<T>::parseMetaData(T addr)
 	for (unsigned int n = 0; n < signalMethodList.size(); ++n) {
 		qstring methodMsg = signalMethodList[n].retType + " " + signalMethodList[n].methodName + "(";
 		for (unsigned int m = 0; m < signalMethodList[n].argCount; ++m) {
-			methodMsg = methodMsg + signalMethodList[n].paramsType[m] + " " + signalMethodList[n].paramsName[m] + ",";
+			methodMsg = methodMsg + signalMethodList[n].paramsType[m] + OuputParamName(signalMethodList[n].paramsName[m]) + ", ";
 		}
 		if (signalMethodList[n].argCount) {
-			methodMsg.remove_last();
+			methodMsg.remove_last(2);
 		}
 		methodMsg = methodMsg + ")";
 		msg("%d %s\n", index++, methodMsg.c_str());
@@ -365,10 +375,10 @@ bool QtMetaParser<T>::parseMetaData(T addr)
 	for (unsigned int n = 0; n < slotMethodList.size(); ++n) {
 		qstring methodMsg = slotMethodList[n].retType + " " + slotMethodList[n].methodName + "(";
 		for (unsigned int m = 0; m < slotMethodList[n].argCount; ++m) {
-			methodMsg = methodMsg + slotMethodList[n].paramsType[m] + " " + slotMethodList[n].paramsName[m] + ",";
+			methodMsg = methodMsg + slotMethodList[n].paramsType[m] + OuputParamName(slotMethodList[n].paramsName[m]) + ", ";
 		}
 		if (slotMethodList[n].argCount) {
-			methodMsg.remove_last();
+			methodMsg.remove_last(2);
 		}
 		methodMsg = methodMsg + ")";
 		msg("%d %s\n", index++, methodMsg.c_str());
@@ -446,7 +456,7 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 		if (end != start + 1) {
 			//参数个数为1
 			if (!std::count(signalMethodList[n].methodSignature.begin(), signalMethodList[n].methodSignature.end(), ',')) {
-				funcSrc = funcSrc + signalMethodList[n].methodSignature.substr(start + 1, end) + " " + signalMethodList[n].paramName;
+				funcSrc = funcSrc + signalMethodList[n].methodSignature.substr(start + 1, end) + OuputParamName(signalMethodList[n].paramName);
 			}
 			else {
 				qvector<qstring> pararmNameList = recognizeFunctionParamsNameList(signalMethodList[n].paramName);
@@ -456,9 +466,9 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 					return false;
 				}
 				for (unsigned int k = 0; k < paramTypeList.size(); ++k) {
-					funcSrc = funcSrc + paramTypeList[k] + " " + pararmNameList[k] + ",";
+					funcSrc = funcSrc + paramTypeList[k] + OuputParamName(pararmNameList[k]) + ", ";
 				}
-				funcSrc.remove_last();
+				funcSrc.remove_last(2);
 			}
 		}
 		funcSrc = funcSrc + ")";
@@ -481,7 +491,7 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 		if (end != start + 1) {
 			//参数个数为1
 			if (!std::count(slotMethodList[n].methodSignature.begin(), slotMethodList[n].methodSignature.end(), ',')) {
-				funcSrc = funcSrc + slotMethodList[n].methodSignature.substr(start + 1, end) + " " + slotMethodList[n].paramName;
+				funcSrc = funcSrc + slotMethodList[n].methodSignature.substr(start + 1, end) + OuputParamName(slotMethodList[n].paramName);
 			}
 			else {
 				qvector<qstring> pararmNameList = recognizeFunctionParamsNameList(slotMethodList[n].paramName);
@@ -491,9 +501,9 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 					return false;
 				}
 				for (unsigned int k = 0; k < paramTypeList.size(); ++k) {
-					funcSrc = funcSrc + paramTypeList[k] + " " + pararmNameList[k] + ",";
+					funcSrc = funcSrc + paramTypeList[k] + OuputParamName(pararmNameList[k]) + ", ";
 				}
-				funcSrc.remove_last();
+				funcSrc.remove_last(2);
 			}
 		}
 		funcSrc = funcSrc + ")";

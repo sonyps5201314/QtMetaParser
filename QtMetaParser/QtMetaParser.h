@@ -3,19 +3,21 @@
 
 qstring get_shortstring(ea_t addr)
 {
+	qstring ret;
 	if (addr <= 0) {
-		return "";
+		return ret;
 	}
-	char buffer[255] = { 0 };
+	char buffer[260];
 	//没读取到完整的字节应该算是错误了
 	if (get_bytes(buffer, sizeof(buffer), addr, GMB_READALL, NULL) != sizeof(buffer)) {
-		return "";
+		return ret;
 	}
-	qstring ret = buffer;
+	buffer[std::size(buffer) - 1] = 0;
+	ret = buffer;
 	return ret;
 }
 
-std::map<unsigned int, qstring> gMapQMetaType;
+std::map<unsigned int, const char*> gMapQMetaType;
 
 template<typename T>
 struct QMetaObject_d
@@ -185,7 +187,7 @@ qstring QtMetaParser<T>::getParamType(std::uint32_t paramIndex)
 	if (paramIndex & 0x80000000) {
 		return this->stringDataList[paramIndex & 0xFFFFFFF];
 	}
-	std::map<unsigned int, qstring>::iterator it = gMapQMetaType.find(paramIndex);
+	std::map<unsigned int, const char*>::iterator it = gMapQMetaType.find(paramIndex);
 	if (it != gMapQMetaType.end()) {
 		return it->second;
 	}
@@ -441,7 +443,7 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 	//开始生成完整的函数签名
 	qstring className = get_shortstring(metaObject.stringdata);
 	for (unsigned int n = 0; n < signalMethodList.size(); ++n) {
-		if (signalMethodList[n].retType == "") {
+		if (signalMethodList[n].retType.empty()) {
 			signalMethodList[n].retType = "void";
 		}
 		qstring funcSrc = signalMethodList[n].retType + " ";
@@ -476,7 +478,7 @@ bool QtMetaParser<T>::parseMetaData_4(T addr)
 	}
 
 	for (unsigned int n = 0; n < slotMethodList.size(); ++n) {
-		if (slotMethodList[n].retType == "") {
+		if (slotMethodList[n].retType.empty()) {
 			slotMethodList[n].retType = "void";
 		}
 		qstring funcSrc = slotMethodList[n].retType + " ";

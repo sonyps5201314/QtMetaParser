@@ -1,5 +1,4 @@
 #pragma once
-#include "QtMetaParser.h"
 
 qstring get_shortstring(ea_t addr)
 {
